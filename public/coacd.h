@@ -4,6 +4,9 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <atomic>
+
+#define WITH_LOG 0
 
 namespace coacd {
 
@@ -18,7 +21,8 @@ struct Mesh {
   std::vector<std::array<int, 3>> indices;
 };
 
-std::vector<Mesh> CoACD(Mesh const &input, double threshold = 0.05,
+std::vector<Mesh> CoACD(const std::atomic<bool>& abort,
+                        Mesh const &input, double threshold = 0.05,
                         int max_convex_hull = -1, std::string preprocess = "auto",
                         int prep_resolution = 50, int sample_resolution = 2000,
                         int mcts_nodes = 20, int mcts_iteration = 150,
@@ -53,14 +57,17 @@ constexpr int preprocess_off = 2;
 constexpr int apx_ch = 0;
 constexpr int apx_box = 1;
 
-CoACD_MeshArray COACD_API CoACD_run(CoACD_Mesh const &input, double threshold,
-                                    int max_convex_hull, int preprocess_mode,
-                                    int prep_resolution, int sample_resolution,
-                                    int mcts_nodes, int mcts_iteration,
-                                    int mcts_max_depth, bool pca, bool merge,
-                                    bool decimate, int max_ch_vertex,
-                                    bool extrude, double extrude_margin,
-                                    int apx_mode, unsigned int seed);
+bool COACD_API CoACD_run(const std::atomic<bool>& abort,
+    CoACD_MeshArray* result, const CoACD_Mesh* input,
+    double threshold, int max_convex_hull,
+    int preprocess_mode, int prep_resolution,
+    int sample_resolution, int mcts_nodes,
+    int mcts_iteration, int mcts_max_depth,
+    bool pca, bool merge,
+    bool decimate, int max_ch_vertex,
+    bool extrude, double extrude_margin,
+    int apx_mode, unsigned int seed
+);
 
 void COACD_API CoACD_setLogLevel(char const *level);
 }

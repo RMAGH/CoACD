@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
   if (params.pca)
     rot = m.PCA();
 
-  vector<Model> parts = Compute(m, params);
+  vector<Model> parts = Compute(std::atomic<bool>(false), m, params);
 
   RecoverParts(parts, bbox, rot, params);
 

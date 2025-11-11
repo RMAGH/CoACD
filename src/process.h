@@ -31,7 +31,7 @@ namespace coacd
   double MergeConvexHulls(Model &m, vector<Model> &meshs, vector<Model> &cvxs, Params &params, double epsilon = 0.02, double threshold = 0.01);
   void ExtrudeCH(Model &ch, Plane overlap_plane, Params &params, double margin = 0.01);
   void ExtrudeConvexHulls(vector<Model> &cvxs, Params &params, double eps = 1e-4);
-      vector<Model> Compute(Model &mesh, Params &params);
+  vector<Model> Compute(const std::atomic<bool>& abort, Model &mesh, Params &params);
   bool IsManifold(Model &input);
 
   inline void addNeighbor(map<pair<int, int>, pair<int, int>> &edge_map, pair<int, int> &edge, vector<int> &neighbors, int idx)

@@ -12,7 +12,9 @@ namespace coacd
 
     bool IsManifold(Model &input)
     {
+#if WITH_LOG
         logger::info(" - Manifold Check");
+#endif
         clock_t start, end;
         start = clock();
         // Check all edges are shared by exactly two triangles (watertight manifold)
@@ -31,27 +33,39 @@ namespace coacd
                 edge_num[{idx0, idx1}] = 1;
             else
             {
+#if WITH_LOG
                 logger::info("\tWrong triangle orientation");
+#endif
                 end = clock();
+#if WITH_LOG
                 logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
                 return false;
             }
             if (!edge_num.contains({idx1, idx2}))
                 edge_num[{idx1, idx2}] = 1;
             else
             {
+#if WITH_LOG
                 logger::info("\tWrong triangle orientation");
+#endif
                 end = clock();
+#if WITH_LOG
                 logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
                 return false;
             }
             if (!edge_num.contains({idx2, idx0}))
                 edge_num[{idx2, idx0}] = 1;
             else
             {
+#if WITH_LOG
                 logger::info("\tWrong triangle orientation");
+#endif
                 end = clock();
+#if WITH_LOG
                 logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
                 return false;
             }
         }
@@ -61,14 +75,19 @@ namespace coacd
             pair<int, int> oppo_edge = {edges[i].second, edges[i].first};
             if (!edge_num.contains(oppo_edge))
             {
+#if WITH_LOG
                 logger::info("\tUnclosed mesh");
+#endif
                 end = clock();
+#if WITH_LOG
                 logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
                 return false;
             }
         }
+#if WITH_LOG
         logger::info("[1/3] Edge check finish");
-
+#endif
         // Check self-intersection
         BVH bvhTree(input);
         for (int i = 0; i < (int)input.triangles.size(); i++)
@@ -76,13 +95,19 @@ namespace coacd
             bool is_intersect = bvhTree.IntersectBVH(input.triangles[i], 0);
             if (is_intersect)
             {
+#if WITH_LOG
                 logger::info("\tTriangle self-intersection");
+#endif
                 end = clock();
+#if WITH_LOG
                 logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
                 return false;
             }
         }
+#if WITH_LOG
         logger::info("[2/3] Self-intersection check finish");
+#endif
 
         // Check triange orientation
         double mesh_vol = MeshVolume(input);
@@ -93,10 +118,10 @@ namespace coacd
                 std::swap(input.triangles[i][0], input.triangles[i][1]);
         }
         end = clock();
-
+#if WITH_LOG
         logger::info("[3/3] Triangle orientation check finish. Reversed: {}", mesh_vol < 0);
         logger::info("Manifold Check Time: {}s", double(end - start) / CLOCKS_PER_SEC);
-
+#endif
         return true;
     }
 
@@ -216,7 +241,9 @@ namespace coacd
 
     void DecimateConvexHulls(vector<Model> &cvxs, Params &params)
     {
+#if WITH_LOG
         logger::info(" - Simplify Convex Hulls");
+#endif
         for (int i = 0; i < (int)cvxs.size(); i++)
         {
             DecimateCH(cvxs[i], params.max_ch_vertex, params.apx_mode);
@@ -237,7 +264,9 @@ namespace coacd
 
     double MergeConvexHulls(Model &m, vector<Model> &meshs, vector<Model> &cvxs, Params &params, double epsilon, double threshold)
     {
+#if WITH_LOG
         logger::info(" - Merge Convex Hulls");
+#endif
         size_t nConvexHulls = (size_t)cvxs.size();
         double h = 0;
 
@@ -284,7 +313,9 @@ namespace coacd
                 const int32_t addr = FindMinimumElement(costMatrix, &bestCost, 0, (int32_t)costMatrix.size());
                 if (addr < 0)
                 {
+#if WITH_LOG
                     logger::warn("No more convex hulls to merge, cannot reach the given convex hull limits");
+#endif
                     break;
                 }
 
@@ -304,8 +335,10 @@ namespace coacd
                     // if set the max nConvexHull, ignore the threshold limitation and stio the merging untill # part reach the constraint
                     if ((int)cvxs.size() <= params.max_convex_hull && bestCost > params.threshold)
                     {
+#if WITH_LOG
                         if (bestCost > params.threshold + 0.005 && (int)cvxs.size() == params.max_convex_hull)
                             logger::warn("Max concavity {} exceeds the threshold {} due to {} convex hull limitation", bestCost, params.threshold, params.max_convex_hull);
+#endif
                         break;
                     }
                     if ((int)cvxs.size() <= params.max_convex_hull && bestCost > max(params.threshold - precostMatrix[addr], 0.01)) // avoid merging two parts that have already used up the treshold
@@ -430,7 +463,9 @@ namespace coacd
 
     void ExtrudeConvexHulls(vector<Model> &cvxs, Params &params, double eps)
     {
+#if WITH_LOG
         logger::info(" - Extrude Convex Hulls");
+#endif
         for (int i = 0; i < (int)cvxs.size(); i++)
         {
             Model cvx = cvxs[i];
@@ -454,7 +489,7 @@ namespace coacd
         }
     }
 
-    vector<Model> Compute(Model &mesh, Params &params)
+    vector<Model> Compute(const std::atomic<bool>& abort, Model &mesh, Params &params)
     {
         vector<Model> InputParts = {mesh};
         vector<Model> parts, pmeshs;
@@ -467,26 +502,30 @@ namespace coacd
         clock_t start, end;
         start = clock();
 #endif
-
+#if WITH_LOG
         logger::info("# Points: {}", mesh.points.size());
         logger::info("# Triangles: {}", mesh.triangles.size());
         logger::info(" - Decomposition (MCTS)");
-
+#endif
         size_t iter = 0;
         double cut_area;
-        while ((int)InputParts.size() > 0)
+        while (!abort.load() && (int)InputParts.size() > 0)
         {
             vector<Model> tmp;
+#if WITH_LOG
             logger::info("iter {} ---- waiting pool: {}", iter, InputParts.size());
+#endif
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(InputParts, params, mesh, writelock, parts, pmeshs, tmp) private(cut_area)
+#pragma omp parallel for default(none) shared(InputParts, params, mesh, abort, writelock, parts, pmeshs, tmp) private(cut_area)
 #endif
             for (int p = 0; p < (int)InputParts.size(); p++)
             {
+                if (abort.load()) { break; }
                 random_engine.seed(params.seed);
+#if WITH_LOG
                 if (p % ((int)InputParts.size() / 10 + 1) == 0)
                     logger::info("Processing [{:.1f}%]", p * 100.0 / (int)InputParts.size());
-
+#endif
                 Model pmesh = InputParts[p], pCH;
                 Plane bestplane;
                 pmesh.ComputeAPX(pCH, params.apx_mode, true);
@@ -523,7 +562,9 @@ namespace coacd
                         bool clipf = Clip(pmesh, pos, neg, bestplane, cut_area);
                         if (!clipf)
                         {
+#if WITH_LOG
                             logger::error("Wrong clip proposal!");
+#endif
                             exit(0);
                         }
 #ifdef _OPENMP
@@ -550,30 +591,37 @@ namespace coacd
 #endif
                 }
             }
+#if WITH_LOG
             logger::info("Processing [100.0%]");
+#endif
             InputParts.clear();
             InputParts = tmp;
             tmp.clear();
             iter++;
         }
-        if (params.merge)
+        if (params.merge && !abort.load())
             MergeConvexHulls(mesh, pmeshs, parts, params);
 
-        if (params.decimate)
+        if (params.decimate && !abort.load())
             DecimateConvexHulls(parts, params);
 
-        if (params.extrude)
+        if (params.extrude && !abort.load())
             ExtrudeConvexHulls(parts, params);
 
 #ifdef _OPENMP
         end = omp_get_wtime();
+#if WITH_LOG
         logger::info("Compute Time: {}s", double(end - start));
+#endif
 #else
         end = clock();
+#if WITH_LOG
         logger::info("Compute Time: {}s", double(end - start) / CLOCKS_PER_SEC);
 #endif
+#endif
+#if WITH_LOG
         logger::info("# Convex Hulls: {}", (int)parts.size());
-
+#endif
         return parts;
     }
 }
