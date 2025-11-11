@@ -516,7 +516,7 @@ namespace coacd
             logger::info("iter {} ---- waiting pool: {}", iter, InputParts.size());
 #endif
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(InputParts, params, mesh, abort, writelock, parts, pmeshs, tmp) private(cut_area)
+//#pragma omp parallel for default(none) shared(InputParts, params, mesh, abort, writelock, parts, pmeshs, tmp) private(cut_area)
 #endif
             for (int p = 0; p < (int)InputParts.size(); p++)
             {

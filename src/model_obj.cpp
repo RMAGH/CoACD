@@ -556,9 +556,10 @@ namespace coacd
     bool Model::Load(vector<vec3d> vertices, vector<vec3i> face_indices)
     {
         double x_min = INF, x_max = -INF, y_min = INF, y_max = -INF, z_min = INF, z_max = -INF;
+        points.resize(vertices.size());
         for (int i = 0; i < (int)vertices.size(); ++i)
         {
-            points.push_back({vertices[i][0], vertices[i][1], vertices[i][2]});
+            points[i] = {vertices[i][0], vertices[i][1], vertices[i][2]};
 
             x_min = min(x_min, vertices[i][0]);
             x_max = max(x_max, vertices[i][0]);
@@ -575,9 +576,10 @@ namespace coacd
         bbox[4] = z_min;
         bbox[5] = z_max;
 
+        triangles.resize(face_indices.size());
         for (int i = 0; i < (int)face_indices.size(); ++i)
         {
-            triangles.push_back({face_indices[i][0], face_indices[i][1], face_indices[i][2]});
+            triangles[i] = {face_indices[i][0], face_indices[i][1], face_indices[i][2]};
         }
 
         return true;

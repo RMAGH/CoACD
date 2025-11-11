@@ -48,8 +48,6 @@ struct CoACD_MeshArray {
   uint64_t meshes_count;
 };
 
-void COACD_API CoACD_freeMeshArray(CoACD_MeshArray arr);
-
 constexpr int preprocess_auto = 0;
 constexpr int preprocess_on = 1;
 constexpr int preprocess_off = 2;
@@ -57,7 +55,7 @@ constexpr int preprocess_off = 2;
 constexpr int apx_ch = 0;
 constexpr int apx_box = 1;
 
-bool COACD_API CoACD_run(const std::atomic<bool>& abort,
+bool COACD_API CoACD_build(const std::atomic<bool>& abort,
     CoACD_MeshArray* result, const CoACD_Mesh* input,
     double threshold, int max_convex_hull,
     int preprocess_mode, int prep_resolution,
@@ -69,5 +67,5 @@ bool COACD_API CoACD_run(const std::atomic<bool>& abort,
     int apx_mode, unsigned int seed
 );
 
-void COACD_API CoACD_setLogLevel(char const *level);
+bool COACD_API CoACD_clear(CoACD_MeshArray* target);
 }

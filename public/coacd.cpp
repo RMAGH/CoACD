@@ -74,8 +74,7 @@ std::vector<Mesh> CoACD(const std::atomic<bool>& abort,
   Model m;
   m.Load(input.vertices, input.indices);
   vector<double> bbox = m.Normalize();
-  array<array<double, 3>, 3> rot{
-      {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
+  array<array<double, 3>, 3> rot{{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
 
   if (params.preprocess_mode == std::string("auto")) {
     bool is_manifold = IsManifold(m);
@@ -125,21 +124,7 @@ void set_log_level(std::string_view level) {
 } // namespace coacd
 
 extern "C" {
-void CoACD_freeMeshArray(CoACD_MeshArray arr) {
-  for (uint64_t i = 0; i < arr.meshes_count; ++i) {
-    delete[] arr.meshes_ptr[i].vertices_ptr;
-    arr.meshes_ptr[i].vertices_ptr = nullptr;
-    arr.meshes_ptr[i].vertices_count = 0;
-    delete[] arr.meshes_ptr[i].triangles_ptr;
-    arr.meshes_ptr[i].triangles_ptr = nullptr;
-    arr.meshes_ptr[i].triangles_count = 0;
-  }
-  arr.meshes_count = 0;
-  arr.meshes_ptr = nullptr;
-  delete[] arr.meshes_ptr;
-}
-
-bool CoACD_run(const std::atomic<bool>& abort,
+bool CoACD_build(const std::atomic<bool>& abort,
     CoACD_MeshArray* result, const CoACD_Mesh* input,
     double threshold, int max_convex_hull,
     int preprocess_mode, int prep_resolution,
@@ -215,7 +200,19 @@ bool CoACD_run(const std::atomic<bool>& abort,
   return true;
 }
 
-void CoACD_setLogLevel(char const *level) {
-  coacd::set_log_level(std::string_view(level));
+bool CoACD_clear(CoACD_MeshArray* target) {
+    if (!target) { return false; }
+    for (uint64_t i = 0; i < target->meshes_count; ++i) {
+        delete[] target->meshes_ptr[i].vertices_ptr;
+        target->meshes_ptr[i].vertices_ptr = nullptr;
+        target->meshes_ptr[i].vertices_count = 0;
+        delete[] target->meshes_ptr[i].triangles_ptr;
+        target->meshes_ptr[i].triangles_ptr = nullptr;
+        target->meshes_ptr[i].triangles_count = 0;
+    }
+    target->meshes_count = 0;
+    target->meshes_ptr = nullptr;
+    delete[] target->meshes_ptr;
+    return true;
 }
 }
