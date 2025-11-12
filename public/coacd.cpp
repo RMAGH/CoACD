@@ -197,7 +197,7 @@ bool CoACD_build(const std::atomic<bool>& abort,
        result->meshes_ptr[i].triangles_ptr[3 * j + 2] = meshes[i].indices[j][2];
     }
   }
-  return true;
+  return !abort.load();
 }
 
 bool CoACD_clear(CoACD_MeshArray* target) {
