@@ -279,7 +279,7 @@ namespace coacd
             precostMatrix.resize(bound); // only keeps the top half of the matrix
 
             size_t p1, p2;
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
 #pragma omp parallel for default(none) shared(costMatrix, precostMatrix, cvxs, params, bound, threshold, meshs) private(p1, p2)
 #endif
             for (int idx = 0; idx < bound; ++idx)
@@ -493,7 +493,7 @@ namespace coacd
     {
         vector<Model> InputParts = {mesh};
         vector<Model> parts, pmeshs;
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
         omp_lock_t writelock;
         omp_init_lock(&writelock);
         double start, end;
@@ -515,7 +515,7 @@ namespace coacd
 #if WITH_LOG
             logger::info("iter {} ---- waiting pool: {}", iter, InputParts.size());
 #endif
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
 //#pragma omp parallel for default(none) shared(InputParts, params, mesh, abort, writelock, parts, pmeshs, tmp) private(cut_area)
 #endif
             for (int p = 0; p < (int)InputParts.size(); p++)
@@ -542,13 +542,13 @@ namespace coacd
                     Node *best_next_node = MonteCarloTreeSearch(params, node, best_path);
                     if (best_next_node == NULL)
                     {
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                         omp_set_lock(&writelock);
 #endif
                         parts.push_back(pCH);
                         pmeshs.push_back(pmesh);
                         free_tree(node, 0);
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                         omp_unset_lock(&writelock);
 #endif
                     }
@@ -567,26 +567,26 @@ namespace coacd
 #endif
                             exit(0);
                         }
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                         omp_set_lock(&writelock);
 #endif
                         if ((int)pos.triangles.size() > 0)
                             tmp.push_back(pos);
                         if ((int)neg.triangles.size() > 0)
                             tmp.push_back(neg);
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                         omp_unset_lock(&writelock);
 #endif
                     }
                 }
                 else
                 {
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                     omp_set_lock(&writelock);
 #endif
                     parts.push_back(pCH);
                     pmeshs.push_back(pmesh);
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
                     omp_unset_lock(&writelock);
 #endif
                 }
@@ -608,7 +608,7 @@ namespace coacd
         if (params.extrude && !abort.load())
             ExtrudeConvexHulls(parts, params);
 
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
         end = omp_get_wtime();
 #if WITH_LOG
         logger::info("Compute Time: {}s", double(end - start));

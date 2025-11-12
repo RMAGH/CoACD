@@ -1,5 +1,5 @@
 #pragma once
-
+#include "../public/def.h"
 #include <iostream>
 #include <string>
 #include <random>
@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <regex>
-#ifdef _OPENMP
+#ifdef WITH_OPENMP
 #include <omp.h>
 #endif
 

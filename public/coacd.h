@@ -1,12 +1,11 @@
 #pragma once
+#include "def.h"
 #include <array>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <atomic>
-
-#define WITH_LOG 0
 
 namespace coacd {
 
