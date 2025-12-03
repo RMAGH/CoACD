@@ -25,6 +25,21 @@
           "name": "CMAKE_MSVC_RUNTIME_LIBRARY",
           "value": "MultiThreaded",
           "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS",
+          "value": "/DWIN32 /D_WINDOWS /EHsc",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS_RELWITHDEBINFO",
+          "value": "/Zi /O2 /DNDEBUG /GL /arch:AVX2",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO",
+          "value": "/debug /LTCG",
+          "type": "STRING"
         }
       ]
     }
