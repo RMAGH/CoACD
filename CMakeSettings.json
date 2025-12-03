@@ -1,0 +1,32 @@
+﻿{
+  "configurations": [
+    {
+      "name": "Release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TBB_TEST",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "OPENVDB_CORE_SHARED",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_MSVC_RUNTIME_LIBRARY",
+          "value": "MultiThreaded",
+          "type": "STRING"
+        }
+      ]
+    }
+  ]
+}
