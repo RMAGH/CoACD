@@ -35,8 +35,7 @@ namespace coacd
 
         for (int i = 1; i < (int)border.size(); i++)
         {
-            double dist = sqrt(pow(border[idx0][0] - border[i][0], 2) + pow(border[idx0][1] - border[i][1], 2) + pow(border[idx0][2] - border[i][2], 2));
-            if (dist > 0.01)
+            if (sqrt(border[idx0][0] * border[idx0][0] + border[idx0][1] * border[idx0][1] + border[idx0][2] * border[idx0][2]) > 0.01)
             {
                 flag = 1;
                 idx1 = i;
@@ -62,8 +61,10 @@ namespace coacd
             BC[1] = p2[1] - p1[1];
             BC[2] = p2[2] - p1[2];
 
+            double s0 = sqrt(AB[0] * AB[0] + AB[1] * AB[1] + AB[2] * AB[2]);
+            double s1 = sqrt(BC[0] * BC[0] + BC[1] * BC[1] + BC[2] * BC[2]);
             double dot_product = AB[0] * BC[0] + AB[1] * BC[1] + AB[2] * BC[2];
-            double res = dot_product / (sqrt(pow(AB[0], 2) + pow(AB[1], 2) + pow(AB[2], 2)) * sqrt(pow(BC[0], 2) + pow(BC[1], 2) + pow(BC[2], 2)));
+            double res = dot_product / (s0 * s1);
             if (fabs(fabs(res) - 1) > 1e-6 && fabs(res) < INF) // AB not \\ BC, dot product != 1
             {
                 flag = 1;
@@ -94,23 +95,36 @@ namespace coacd
 
         // rotation matrix
         double eps = 0.0;
-        R[0][0] = (p0[0] - p1[0]) / (sqrt(pow(p0[0] - p1[0], 2) + pow(p0[1] - p1[1], 2) + pow(p0[2] - p1[2], 2)) + eps);
-        R[0][1] = (p0[1] - p1[1]) / (sqrt(pow(p0[0] - p1[0], 2) + pow(p0[1] - p1[1], 2) + pow(p0[2] - p1[2], 2)) + eps);
-        R[0][2] = (p0[2] - p1[2]) / (sqrt(pow(p0[0] - p1[0], 2) + pow(p0[1] - p1[1], 2) + pow(p0[2] - p1[2], 2)) + eps);
+
+        t0 = p0[0] - p1[0];
+        t1 = p0[1] - p1[1];
+        t2 = p0[2] - p1[2];
+        {
+            double s = sqrt(t0 * t0 + t1 * t1 + t2 * t2);
+            R[0][0] = t0 / (s + eps);
+            R[0][1] = t1 / (s + eps);
+            R[0][2] = t2 / (s + eps);
+        }
 
         t0 = (p2[2] - p0[2]) * R[0][1] - (p2[1] - p0[1]) * R[0][2];
         t1 = (p2[0] - p0[0]) * R[0][2] - (p2[2] - p0[2]) * R[0][0];
         t2 = (p2[1] - p0[1]) * R[0][0] - (p2[0] - p0[0]) * R[0][1];
-        R[2][0] = t0 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
-        R[2][1] = t1 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
-        R[2][2] = t2 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
+        {
+            double s = sqrt(t0 * t0 + t1 * t1 + t2 * t2);
+            R[2][0] = t0 / (s + eps);
+            R[2][1] = t1 / (s + eps);
+            R[2][2] = t2 / (s + eps);
+        }
 
         t0 = R[2][2] * R[0][1] - R[2][1] * R[0][2];
         t1 = R[2][0] * R[0][2] - R[2][2] * R[0][0];
         t2 = R[2][1] * R[0][0] - R[2][0] * R[0][1];
-        R[1][0] = t0 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
-        R[1][1] = t1 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
-        R[1][2] = t2 / (sqrt(pow(t0, 2) + pow(t1, 2) + pow(t2, 2)) + eps);
+        {
+            double s = sqrt(t0 * t0 + t1 * t1 + t2 * t2);
+            R[1][0] = t0 / (s + eps);
+            R[1][1] = t1 / (s + eps);
+            R[1][2] = t2 / (s + eps);
+        }
 
         return true;
     }

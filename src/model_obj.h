@@ -92,7 +92,7 @@ namespace coacd
 
     double MeshArea(Model &mesh);
     double MeshVolume(Model &mesh);
-    void RecoverParts(vector<Model> &meshes, vector<double> bbox, array<array<double, 3>, 3> rot, Params &params);
+    void RecoverParts(vector<Model> &meshes, vector<double> bbox, const double center[3], array<array<double, 3>, 3> rot, Params &params);
     bool ComputeOverlapFace(Model &convex1, Model &convex2, Plane &plane);
     void ExtractPointSet(Model convex1, Model convex2, unsigned int seed, vector<vec3d> &samples, size_t resolution = 4000);
     void ExtractPointSet(Model &convex1, Model &convex2, vector<vec3d> &samples, vector<int> &sample_tri_ids, unsigned int seed, size_t resolution);

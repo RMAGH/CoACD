@@ -4,22 +4,28 @@
 #include "../src/process.h"
 
 namespace coacd {
-void RecoverParts(vector<Model> &meshes, vector<double> bbox,
-                  array<array<double, 3>, 3> rot) {
+void RecoverParts(vector<Model> &meshes, vector<double> bbox, const double center[3],
+                  array<array<double, 3>, 3> rot, bool pca) {
   for (int i = 0; i < (int)meshes.size(); i++) {
+    if (pca) {
+        meshes[i].barycenter[0] = center[0];
+        meshes[i].barycenter[1] = center[1];
+        meshes[i].barycenter[2] = center[2];
+        meshes[i].RevertPCA(rot);
+    }
     meshes[i].Recover(bbox);
-    meshes[i].RevertPCA(rot);
   }
 }
 
-std::vector<Mesh> CoACD(Mesh const &input, double threshold,
+std::vector<Mesh> CoACD(const std::atomic<bool>& abort,
+                        Mesh const &input, double threshold,
                         int max_convex_hull, std::string preprocess_mode,
                         int prep_resolution, int sample_resolution,
                         int mcts_nodes, int mcts_iteration, int mcts_max_depth,
                         bool pca, bool merge, bool decimate, int max_ch_vertex,
                         bool extrude, double extrude_margin,
                         std::string apx_mode, unsigned int seed) {
-
+#if WITH_LOG
   logger::info("threshold               {}", threshold);
   logger::info("max # convex hull       {}", max_convex_hull);
   logger::info("preprocess mode         {}", preprocess_mode);
@@ -35,7 +41,7 @@ std::vector<Mesh> CoACD(Mesh const &input, double threshold,
   logger::info("extrude margin          {}", extrude_margin);
   logger::info("approximate mode        {}", apx_mode);
   logger::info("seed                    {}", seed);
-
+#endif
   if (threshold < 0.01) {
     throw std::runtime_error("CoACD threshold < 0.01 (should be 0.01-1).");
   } else if (threshold > 1) {
@@ -73,12 +79,13 @@ std::vector<Mesh> CoACD(Mesh const &input, double threshold,
   Model m;
   m.Load(input.vertices, input.indices);
   vector<double> bbox = m.Normalize();
-  array<array<double, 3>, 3> rot{
-      {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
+  array<array<double, 3>, 3> rot{{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
 
   if (params.preprocess_mode == std::string("auto")) {
     bool is_manifold = IsManifold(m);
+#if WITH_LOG
     logger::info("Mesh Manifoldness: {}", is_manifold);
+#endif
     if (!is_manifold)
       ManifoldPreprocess(params, m);
   } else if (params.preprocess_mode == std::string("on")) {
@@ -89,12 +96,14 @@ std::vector<Mesh> CoACD(Mesh const &input, double threshold,
     rot = m.PCA();
   }
 
-  vector<Model> parts = Compute(m, params);
-  RecoverParts(parts, bbox, rot);
-
   std::vector<Mesh> result;
-  for (auto &p : parts) {
-    result.push_back(Mesh{.vertices = p.points, .indices = p.triangles});
+  vector<Model> parts = Compute(abort, m, params);
+  if (!abort.load())
+  {
+      RecoverParts(parts, bbox, m.barycenter, rot, pca);
+      for (auto& p : parts) {
+          result.push_back(Mesh{ .vertices = p.points, .indices = p.triangles });
+      }
   }
   return result;
 }
@@ -120,38 +129,35 @@ void set_log_level(std::string_view level) {
 } // namespace coacd
 
 extern "C" {
-void CoACD_freeMeshArray(CoACD_MeshArray arr) {
-  for (uint64_t i = 0; i < arr.meshes_count; ++i) {
-    delete[] arr.meshes_ptr[i].vertices_ptr;
-    arr.meshes_ptr[i].vertices_ptr = nullptr;
-    arr.meshes_ptr[i].vertices_count = 0;
-    delete[] arr.meshes_ptr[i].triangles_ptr;
-    arr.meshes_ptr[i].triangles_ptr = nullptr;
-    arr.meshes_ptr[i].triangles_count = 0;
-  }
-  arr.meshes_count = 0;
-  arr.meshes_ptr = nullptr;
-  delete[] arr.meshes_ptr;
-}
+bool CoACD_build(const std::atomic<bool>& abort,
+    CoACD_MeshArray* result, const CoACD_Mesh* input,
+    double threshold, int max_convex_hull,
+    int preprocess_mode, int prep_resolution,
+    int sample_resolution, int mcts_nodes,
+    int mcts_iteration, int mcts_max_depth,
+    bool pca, bool merge,
+    bool decimate, int max_ch_vertex,
+    bool extrude, double extrude_margin,
+    int apx_mode, unsigned int seed)
+{
+  if (!result || !input || abort.load()) { return false; }
 
-CoACD_MeshArray CoACD_run(CoACD_Mesh const &input, double threshold,
-                          int max_convex_hull, int preprocess_mode,
-                          int prep_resolution, int sample_resolution,
-                          int mcts_nodes, int mcts_iteration,
-                          int mcts_max_depth, bool pca, bool merge,
-                          bool decimate, int max_ch_vertex,
-                          bool extrude, double extrude_margin,
-                          int apx_mode, unsigned int seed) {
   coacd::Mesh mesh;
-  for (uint64_t i = 0; i < input.vertices_count; ++i) {
-    mesh.vertices.push_back({input.vertices_ptr[3 * i],
-                             input.vertices_ptr[3 * i + 1],
-                             input.vertices_ptr[3 * i + 2]});
+  mesh.vertices.resize(input->vertices_count);
+  mesh.indices.resize(input->triangles_count);
+  for (uint64_t i = 0; i < input->vertices_count; ++i) {
+      mesh.vertices[i] = {
+          input->vertices_ptr[3 * i],
+          input->vertices_ptr[3 * i + 1],
+          input->vertices_ptr[3 * i + 2]
+      };
   }
-  for (uint64_t i = 0; i < input.triangles_count; ++i) {
-    mesh.indices.push_back({input.triangles_ptr[3 * i],
-                            input.triangles_ptr[3 * i + 1],
-                            input.triangles_ptr[3 * i + 2]});
+  for (uint64_t i = 0; i < input->triangles_count; ++i) {
+      mesh.indices[i] = {
+          input->triangles_ptr[3 * i],
+          input->triangles_ptr[3 * i + 1],
+          input->triangles_ptr[3 * i + 2]
+      };
   }
 
   std::string pm, apx;
@@ -163,43 +169,53 @@ CoACD_MeshArray CoACD_run(CoACD_Mesh const &input, double threshold,
     pm = "auto";
   }
 
-  if (apx_mode == apx_ch) {
-    apx = "ch";
-  } else if (apx_mode == apx_box) {
+  if (apx_mode == apx_box) {
     apx = "box";
   } else {
-    throw std::runtime_error("invalid approximation mode " + std::to_string(apx_mode));
+    apx = "ch";
   }
 
-  auto meshes = coacd::CoACD(mesh, threshold, max_convex_hull, pm,
-                             prep_resolution, sample_resolution, mcts_nodes,
-                             mcts_iteration, mcts_max_depth, pca, merge, decimate, max_ch_vertex, 
-                             extrude, extrude_margin, apx, seed);
+  auto meshes = coacd::CoACD(
+      abort, mesh, threshold, max_convex_hull, pm, prep_resolution,
+      sample_resolution, mcts_nodes, mcts_iteration, mcts_max_depth,
+      pca, merge, decimate, max_ch_vertex, extrude, extrude_margin,
+      apx, seed
+  );
 
-  CoACD_MeshArray arr;
-  arr.meshes_ptr = new CoACD_Mesh[meshes.size()];
-  arr.meshes_count = meshes.size();
-
+  result->meshes_ptr = new CoACD_Mesh[meshes.size()];
+  result->meshes_count = meshes.size();
   for (size_t i = 0; i < meshes.size(); ++i) {
-    arr.meshes_ptr[i].vertices_ptr = new double[meshes[i].vertices.size() * 3];
-    arr.meshes_ptr[i].vertices_count = meshes[i].vertices.size();
+    result->meshes_ptr[i].vertices_ptr = new double[meshes[i].vertices.size() * 3];
+    result->meshes_ptr[i].vertices_count = meshes[i].vertices.size();
     for (size_t j = 0; j < meshes[i].vertices.size(); ++j) {
-      arr.meshes_ptr[i].vertices_ptr[3 * j] = meshes[i].vertices[j][0];
-      arr.meshes_ptr[i].vertices_ptr[3 * j + 1] = meshes[i].vertices[j][1];
-      arr.meshes_ptr[i].vertices_ptr[3 * j + 2] = meshes[i].vertices[j][2];
+       result->meshes_ptr[i].vertices_ptr[3 * j] = meshes[i].vertices[j][0];
+       result->meshes_ptr[i].vertices_ptr[3 * j + 1] = meshes[i].vertices[j][1];
+       result->meshes_ptr[i].vertices_ptr[3 * j + 2] = meshes[i].vertices[j][2];
     }
-    arr.meshes_ptr[i].triangles_ptr = new int[meshes[i].indices.size() * 3];
-    arr.meshes_ptr[i].triangles_count = meshes[i].indices.size();
+    result->meshes_ptr[i].triangles_ptr = new int[meshes[i].indices.size() * 3];
+    result->meshes_ptr[i].triangles_count = meshes[i].indices.size();
     for (size_t j = 0; j < meshes[i].indices.size(); ++j) {
-      arr.meshes_ptr[i].triangles_ptr[3 * j] = meshes[i].indices[j][0];
-      arr.meshes_ptr[i].triangles_ptr[3 * j + 1] = meshes[i].indices[j][1];
-      arr.meshes_ptr[i].triangles_ptr[3 * j + 2] = meshes[i].indices[j][2];
+       result->meshes_ptr[i].triangles_ptr[3 * j] = meshes[i].indices[j][0];
+       result->meshes_ptr[i].triangles_ptr[3 * j + 1] = meshes[i].indices[j][1];
+       result->meshes_ptr[i].triangles_ptr[3 * j + 2] = meshes[i].indices[j][2];
     }
   }
-  return arr;
+  return !abort.load();
 }
 
-void CoACD_setLogLevel(char const *level) {
-  coacd::set_log_level(std::string_view(level));
+bool CoACD_clear(CoACD_MeshArray* target) {
+    if (!target) { return false; }
+    for (uint64_t i = 0; i < target->meshes_count; ++i) {
+        delete[] target->meshes_ptr[i].vertices_ptr;
+        target->meshes_ptr[i].vertices_ptr = nullptr;
+        target->meshes_ptr[i].vertices_count = 0;
+        delete[] target->meshes_ptr[i].triangles_ptr;
+        target->meshes_ptr[i].triangles_ptr = nullptr;
+        target->meshes_ptr[i].triangles_count = 0;
+    }
+    target->meshes_count = 0;
+    target->meshes_ptr = nullptr;
+    delete[] target->meshes_ptr;
+    return true;
 }
 }

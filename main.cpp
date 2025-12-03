@@ -183,9 +183,9 @@ int main(int argc, char *argv[])
   if (params.pca)
     rot = m.PCA();
 
-  vector<Model> parts = Compute(m, params);
+  vector<Model> parts = Compute(atomic<bool>(false), m, params);
 
-  RecoverParts(parts, bbox, rot, params);
+  RecoverParts(parts, bbox, m.barycenter, rot, params);
 
   string objName = regex_replace(params.output_name, regex("wrl"), "obj");
   string wrlName = regex_replace(params.output_name, regex("obj"), "wrl");

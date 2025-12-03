@@ -22,6 +22,10 @@ namespace coacd
     }
     Plane Part::get_one_move()
     {
+        if (next_choice >= (int)available_moves.size())
+        {
+            return Plane(1.0, 0.0, 0.0, 0.0);
+        }
         return available_moves[next_choice++];
     }
 
