@@ -42,6 +42,44 @@
           "type": "STRING"
         }
       ]
+    },
+    {
+      "name": "Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+	  "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TBB_TEST",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "OPENVDB_CORE_SHARED",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_MSVC_RUNTIME_LIBRARY",
+          "value": "MultiThreaded",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS",
+          "value": "/DWIN32 /D_WINDOWS /EHsc",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS_DEBUG",
+          "value": "/Zi /Ob0 /Od /RTC1 /arch:AVX2",
+          "type": "STRING"
+        }
+      ]
     }
   ]
 }
