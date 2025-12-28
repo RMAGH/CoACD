@@ -119,6 +119,9 @@ namespace coacd
 
     void Model::ComputeBOX(Model &convex)
     {
+        convex.points.reserve(8);
+        convex.triangles.reserve(12);
+
         // compute the box mesh according to the bounding box of the points
         convex.points.push_back({bbox[1], bbox[2], bbox[5]});
         convex.points.push_back({bbox[1], bbox[3], bbox[5]});
@@ -149,6 +152,7 @@ namespace coacd
         bool flag = true;
         quickhull::QuickHull<float> qh; // Could be double as well
         vector<quickhull::Vector3<float>> pointCloud;
+        pointCloud.reserve(points.size());
         // Add points to point cloud
         for (int i = 0; i < (int)points.size(); i++)
         {
@@ -164,6 +168,8 @@ namespace coacd
         }
         const auto &indexBuffer = hull.getIndexBuffer();
         const auto &vertexBuffer = hull.getVertexBuffer();
+        convex.points.reserve((int)vertexBuffer.size());
+        convex.triangles.reserve((int)indexBuffer.size());
         for (int i = 0; i < (int)vertexBuffer.size(); i++)
         {
             convex.points.push_back({vertexBuffer[i].x, vertexBuffer[i].y, vertexBuffer[i].z});
@@ -178,6 +184,7 @@ namespace coacd
     {
         btConvexHullComputer ch;
         ch.compute(points, -1.0, -1.0);
+        convex.points.reserve(ch.vertices.size());
         for (int32_t v = 0; v < ch.vertices.size(); v++)
         {
             convex.points.push_back({ch.vertices[v].getX(), ch.vertices[v].getY(), ch.vertices[v].getZ()});

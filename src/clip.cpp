@@ -139,7 +139,8 @@ namespace coacd
             return 1;
 
         vector<array<double, 2>> points, nodes;
-
+        points.reserve((int)border.size());
+        
         double x_min = INF, x_max = -INF, y_min = INF, y_max = -INF;
         for (int i = 0; i < (int)border.size(); i++)
         {
@@ -194,6 +195,7 @@ namespace coacd
             return 2;
         }
 
+        border_triangles.reserve((size_t)cdt.triangles.size());
         for (size_t i = 0; i < (size_t)cdt.triangles.size(); i++)
         {
             border_triangles.push_back({(int)cdt.triangles[i].vertices[0] + 1,
@@ -448,6 +450,9 @@ namespace coacd
 
         map<pair<int, int>, int> edge_map;
         map<int, int> vertex_map;
+
+        pos.triangles.reserve(mesh.triangles.size());
+        neg.triangles.reserve(mesh.triangles.size());
 
         for (int i = 0; i < (int)mesh.triangles.size(); i++)
         {
