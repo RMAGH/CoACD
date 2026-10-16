@@ -1,6 +1,8 @@
 outputs/*
 build/*
 dist/*
+out/*
+.vs/*
 wheelhouse/*
 coacd.egg-info/*
 *obj
