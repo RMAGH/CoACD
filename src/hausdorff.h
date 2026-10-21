@@ -27,7 +27,10 @@ namespace coacd
 
     double dist_point2point(vec3d pt, vec3d p)
     {
-        return sqrt(pow(pt[0] - p[0], 2) + pow(pt[1] - p[1], 2) + pow(pt[2] - p[2], 2));
+        double a = pt[0] - p[0];
+        double b = pt[1] - p[1];
+        double c = pt[2] - p[2];
+        return sqrt(a * a + b * b + c * c);
     }
 
     double dist_point2segment(vec3d pt, vec3d s0, vec3d s1, bool flag = false)
@@ -41,25 +44,25 @@ namespace coacd
         BC[1] = s0[1] - s1[1];
         BC[2] = s0[2] - s1[2];
 
+        double sq0 = sqrt(BA[0] * BA[0] + BA[1] * BA[1] + BA[2] * BA[2]);
+        double sq1 = sqrt(BC[0] * BC[0] + BC[1] * BC[1] + BC[2] * BC[2]);
+
         // we calculate the projected vector along the segment
-        double proj_dist = (BA[0] * BC[0] + BA[1] * BC[1] + BA[2] * BC[2]) / (sqrt(pow(BC[0], 2) + pow(BC[1], 2) + pow(BC[2], 2)));
+        double proj_dist = (BA[0] * BC[0] + BA[1] * BC[1] + BA[2] * BC[2]) / (sq1);
         if (flag)
         {
             vec3d proj_pt;
-            double len_BC = sqrt(pow(BC[0], 2) + pow(BC[1], 2) + pow(BC[2], 2));
-            proj_pt[0] = s1[0] + proj_dist / len_BC * BC[0];
-            proj_pt[1] = s1[1] + proj_dist / len_BC * BC[1];
-            proj_pt[2] = s1[2] + proj_dist / len_BC * BC[2];
+            proj_pt[0] = s1[0] + proj_dist / sq1 * BC[0];
+            proj_pt[1] = s1[1] + proj_dist / sq1 * BC[1];
+            proj_pt[2] = s1[2] + proj_dist / sq1 * BC[2];
             cout << "v " << proj_pt[0] << ' ' << proj_pt[1] << ' ' << proj_pt[2] << endl;
         }
 
         // we should make sure the projected point is within the segment, otherwise not consider it
         // if projected distance is negative or bigger than BC, it is out
-        double valAB = sqrt(pow(BA[0], 2) + pow(BA[1], 2) + pow(BA[2], 2));
-        double valBC = sqrt(pow(BC[0], 2) + pow(BC[1], 2) + pow(BC[2], 2));
-        if (proj_dist < 0 || proj_dist > valBC)
+        if (proj_dist < 0 || proj_dist > sq1)
             return INF;
-        return sqrt(pow(valAB, 2) - pow(proj_dist, 2));
+        return sqrt(sq0 * sq0 - proj_dist * proj_dist);
     }
 
     double dist_point2triangle(vec3d pt, vec3d tri_pt0, vec3d tri_pt1, vec3d tri_pt2, bool flag = false)
@@ -68,13 +71,14 @@ namespace coacd
         double _a = (tri_pt1[1] - tri_pt0[1]) * (tri_pt2[2] - tri_pt0[2]) - (tri_pt1[2] - tri_pt0[2]) * (tri_pt2[1] - tri_pt0[1]);
         double _b = (tri_pt1[2] - tri_pt0[2]) * (tri_pt2[0] - tri_pt0[0]) - (tri_pt1[0] - tri_pt0[0]) * (tri_pt2[2] - tri_pt0[2]);
         double _c = (tri_pt1[0] - tri_pt0[0]) * (tri_pt2[1] - tri_pt0[1]) - (tri_pt1[1] - tri_pt0[1]) * (tri_pt2[0] - tri_pt0[0]);
-        double a = _a / sqrt(pow(_a, 2) + pow(_b, 2) + pow(_c, 2));
-        double b = _b / sqrt(pow(_a, 2) + pow(_b, 2) + pow(_c, 2));
-        double c = _c / sqrt(pow(_a, 2) + pow(_b, 2) + pow(_c, 2));
+        double s = sqrt(_a * _a + _b * _b + _c * _c);
+        double a = _a / s;
+        double b = _b / s;
+        double c = _c / s;
         double d = 0 - (a * tri_pt0[0] + b * tri_pt0[1] + c * tri_pt0[2]);
 
         // distance can be calculated directly using the function, then we get the projected point as well
-        double dist = fabs(a * pt[0] + b * pt[1] + c * pt[2] + d) / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
+        double dist = fabs(a * pt[0] + b * pt[1] + c * pt[2] + d) / sqrt(a * a + b * b + c * c);
         vec3d proj_pt;
         Plane p = Plane(a, b, c, d);
         short side = p.Side(pt, 1e-8);

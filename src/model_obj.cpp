@@ -27,8 +27,7 @@ namespace coacd
 
         for (int i = 1; i < (int)points.size(); i++)
         {
-            double dist = sqrt(pow(points[idx0][0] - points[i][0], 2) + pow(points[idx0][1] - points[i][1], 2) + pow(points[idx0][2] - points[i][2], 2));
-            if (dist > 0.01)
+            if (sqrt(points[idx0][0] * points[idx0][0] + points[idx0][1] * points[idx0][1] + points[idx0][2] * points[idx0][2]) > 0.01)
             {
                 flag = 1;
                 idx1 = i;
@@ -54,8 +53,10 @@ namespace coacd
             BC[1] = p2[1] - p1[1];
             BC[2] = p2[2] - p1[2];
 
+            double s0 = sqrt(AB[0] * AB[0] + AB[1] * AB[1] + AB[2] * AB[2]);
+            double s1 = sqrt(BC[0] * BC[0] + BC[1] * BC[1] + BC[2] * BC[2]);
             double dot_product = AB[0] * BC[0] + AB[1] * BC[1] + AB[2] * BC[2];
-            double res = dot_product / (sqrt(pow(AB[0], 2) + pow(AB[1], 2) + pow(AB[2], 2)) * sqrt(pow(BC[0], 2) + pow(BC[1], 2) + pow(BC[2], 2)));
+            double res = dot_product / (s0 * s1);
             if (fabs(fabs(res) - 1) > 1e-6 && fabs(res) < INF) // AB not \\ BC, dot product != 1
             {
                 flag = 1;
@@ -72,9 +73,10 @@ namespace coacd
         double a = (p1[1] - p0[1]) * (p2[2] - p0[2]) - (p1[2] - p0[2]) * (p2[1] - p0[1]);
         double b = (p1[2] - p0[2]) * (p2[0] - p0[0]) - (p1[0] - p0[0]) * (p2[2] - p0[2]);
         double c = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]);
-        p.a = a / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-        p.b = b / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-        p.c = c / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
+        double s = sqrt(a * a + b * b + c * c);
+        p.a = a / s;
+        p.b = b / s;
+        p.c = c / s;
         p.d = 0 - (p.a * p1[0] + p.b * p1[1] + p.c * p1[2]);
 
         for (int i = 0; i < (int)points.size(); i++)
@@ -118,6 +120,9 @@ namespace coacd
 
     void Model::ComputeBOX(Model &convex)
     {
+        convex.points.reserve(8);
+        convex.triangles.reserve(12);
+
         // compute the box mesh according to the bounding box of the points
         convex.points.push_back({bbox[1], bbox[2], bbox[5]});
         convex.points.push_back({bbox[1], bbox[3], bbox[5]});
@@ -148,6 +153,7 @@ namespace coacd
         bool flag = true;
         quickhull::QuickHull<float> qh; // Could be double as well
         vector<quickhull::Vector3<float>> pointCloud;
+        pointCloud.reserve(points.size());
         // Add points to point cloud
         for (int i = 0; i < (int)points.size(); i++)
         {
@@ -163,6 +169,8 @@ namespace coacd
         }
         const auto &indexBuffer = hull.getIndexBuffer();
         const auto &vertexBuffer = hull.getVertexBuffer();
+        convex.points.reserve((int)vertexBuffer.size());
+        convex.triangles.reserve((int)indexBuffer.size());
         for (int i = 0; i < (int)vertexBuffer.size(); i++)
         {
             convex.points.push_back({vertexBuffer[i].x, vertexBuffer[i].y, vertexBuffer[i].z});
@@ -177,6 +185,7 @@ namespace coacd
     {
         btConvexHullComputer ch;
         ch.compute(points, -1.0, -1.0);
+        convex.points.reserve(ch.vertices.size());
         for (int32_t v = 0; v < ch.vertices.size(); v++)
         {
             convex.points.push_back({ch.vertices[v].getX(), ch.vertices[v].getY(), ch.vertices[v].getZ()});
@@ -299,9 +308,10 @@ namespace coacd
             double a = (p2[1] - p1[1]) * (p3[2] - p1[2]) - (p2[2] - p1[2]) * (p3[1] - p1[1]);
             double b = (p2[2] - p1[2]) * (p3[0] - p1[0]) - (p2[0] - p1[0]) * (p3[2] - p1[2]);
             double c = (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0]);
-            p.a = a / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-            p.b = b / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-            p.c = c / sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
+            double s = sqrt(a * a + b * b + c * c);
+            p.a = a / s;
+            p.b = b / s;
+            p.c = c / s;
             p.d = 0 - (p.a * p1[0] + p.b * p1[1] + p.c * p1[2]);
 
             short side1 = 0;
@@ -552,7 +562,9 @@ namespace coacd
         }
         else
         {
+#if WITH_LOG
             logger::error("Open File Error!");
+#endif
             return false;
         }
         return true;
@@ -561,10 +573,10 @@ namespace coacd
     bool Model::Load(vector<vec3d> vertices, vector<vec3i> face_indices)
     {
         double x_min = INF, x_max = -INF, y_min = INF, y_max = -INF, z_min = INF, z_max = -INF;
+        points.resize(vertices.size());
         for (int i = 0; i < (int)vertices.size(); ++i)
         {
-            points.push_back({vertices[i][0], vertices[i][1], vertices[i][2]});
-
+            points[i] = { vertices[i][0], vertices[i][1], vertices[i][2] };
             x_min = min(x_min, vertices[i][0]);
             x_max = max(x_max, vertices[i][0]);
             y_min = min(y_min, vertices[i][1]);
@@ -580,9 +592,10 @@ namespace coacd
         bbox[4] = z_min;
         bbox[5] = z_max;
 
+        triangles.resize(face_indices.size());
         for (int i = 0; i < (int)face_indices.size(); ++i)
         {
-            triangles.push_back({face_indices[i][0], face_indices[i][1], face_indices[i][2]});
+            triangles[i] = { face_indices[i][0], face_indices[i][1], face_indices[i][2] };
         }
 
         return true;
@@ -674,9 +687,12 @@ namespace coacd
             double x = points[i][0];
             double y = points[i][1];
             double z = points[i][2];
-            points[i][0] = rot[0][0] * x + rot[0][1] * y + rot[0][2] * z;
-            points[i][1] = rot[1][0] * x + rot[1][1] * y + rot[1][2] * z;
-            points[i][2] = rot[2][0] * x + rot[2][1] * y + rot[2][2] * z;
+            double rx = rot[0][0] * x + rot[0][1] * y + rot[0][2] * z;
+            double ry = rot[1][0] * x + rot[1][1] * y + rot[1][2] * z;
+            double rz = rot[2][0] * x + rot[2][1] * y + rot[2][2] * z;
+            points[i][0] = rx + barycenter[0];
+            points[i][1] = ry + barycenter[1];
+            points[i][2] = rz + barycenter[2];
         }
     }
 
@@ -727,7 +743,9 @@ namespace coacd
         for (int i = 0; i < (int)meshes.size(); i++)
         {
             if (params.pca)
+            {
                 meshes[i].RevertPCA(rot);
+            }
             meshes[i].Recover(bbox);
         }
     }

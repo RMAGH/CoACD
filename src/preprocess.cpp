@@ -9,10 +9,10 @@ namespace coacd
         std::vector<Vec3s> points;
         std::vector<Vec3I> tris;
         std::vector<Vec4I> quads;
-
+#if WITH_LOG
         logger::info(" - Preprocess");
         logger::info("Preprocess resolution: {}", scale);
-
+#endif
         clock_t start, end;
         start = clock();
 
@@ -51,8 +51,9 @@ namespace coacd
             output.triangles.push_back({(int)newQuads[i][0], (int)newQuads[i][3], (int)newQuads[i][2]});
         }
         end = clock();
-
+#if WITH_LOG
         logger::info("Preprocess Time: {}s", double(end - start) / CLOCKS_PER_SEC);
+#endif
     }
 
     void ManifoldPreprocess(Params &params, Model &m)

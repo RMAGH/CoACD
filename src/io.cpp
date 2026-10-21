@@ -5,6 +5,7 @@ namespace coacd
 {
     void SaveConfig(Params params)
     {
+#if WITH_LOG
         logger::info(" - Config");
         logger::info("\tInput Path:                                {}", params.input_model);
         logger::info("\tOutput Path:                               {}", params.output_name);
@@ -27,6 +28,7 @@ namespace coacd
         logger::info("\tApproximation Mode (ch/box):               {}", params.apx_mode);
         logger::info("\tReal Metric Mode (ON/OFF):                  {}", params.real_metric);
         logger::info("\tRandom Seed:                               {}", params.seed);
+#endif
     }
 
     void SaveMesh(const std::string &filename, Model &mesh)

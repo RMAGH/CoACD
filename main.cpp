@@ -129,13 +129,17 @@ int main(int argc, char *argv[])
     ext = params.input_model.substr(params.input_model.length() - 4);
     if (ext != ".obj")
     {
+#if WITH_LOG
       logger::critical("Input must be OBJ format!");
+#endif
       exit(0);
     }
   }
   else
   {
+#if WITH_LOG
     logger::critical("Input Filename Error!");
+#endif
     exit(0);
   }
 
@@ -143,19 +147,25 @@ int main(int argc, char *argv[])
     ext = params.output_name.substr(params.output_name.length() - 4);
   else
   {
+#if WITH_LOG
     logger::critical("Output Filename Error! You can set the output filename as either .OBJ or .WRL!");
+#endif
     exit(0);
   }
   if (ext != ".obj" && ext != ".wrl")
   {
+#if WITH_LOG
     logger::critical("Output Filename must be .OBJ or .WRL format!");
+#endif
     exit(0);
   }
 
   if (!params.real_metric)
   {
+#if WITH_LOG
     if (params.threshold > 1)
       logger::warn("Threshold t exceeds the higher bound and is automatically set as 1!");
+#endif
     params.threshold = min(params.threshold, 1.0);
   }
 
@@ -175,19 +185,23 @@ int main(int argc, char *argv[])
 
   SaveConfig(params);
 
+#if WITH_LOG
   if (params.real_metric)
   {
     logger::info("Real metric mode: mesh max length = {:.2f} cm", real_metric_len * 100.0);
     logger::info("Real metric mode: error threshold = {:.2f} cm", real_metric_original_threshold * 100.0);
     logger::info("Real metric mode: threshold {:.4f} cm (real) -> {:.4f} (normalized)", real_metric_original_threshold * 100.0, params.threshold);
   }
+#endif
   // m.SaveOBJ("normalized.obj");
 
   #if WITH_3RD_PARTY_LIBS
     if (params.preprocess_mode == "auto")
     {
       bool is_manifold = IsManifold(m);
+#if WITH_LOG
       logger::info("Mesh Manifoldness: {}", is_manifold);
+#endif
       if (!is_manifold)
         ManifoldPreprocess(params, m);
     }
@@ -195,10 +209,14 @@ int main(int argc, char *argv[])
       ManifoldPreprocess(params, m);
   #else
     bool is_manifold = IsManifold(m);
+#if WITH_LOG
     logger::info("Mesh Manifoldness: {}", is_manifold);
+#endif
     if (!is_manifold)
     {
+#if WITH_LOG
       logger::critical("The mesh is not a 2-manifold! Please enable WITH_3RD_PARTY_LIBS during compilation, or use third-party libraries to preprocess the mesh.");
+#endif
       exit(0);
     }
 
@@ -209,8 +227,7 @@ int main(int argc, char *argv[])
   if (params.pca)
     rot = m.PCA();
 
-  vector<Model> parts = Compute(m, params);
-
+  vector<Model> parts = Compute(atomic<bool>(false), m, params);
   RecoverParts(parts, bbox, rot, params);
 
   std::string objName = regex_replace(params.output_name, std::regex("wrl"), "obj");
@@ -226,7 +243,9 @@ int main(int argc, char *argv[])
     std::filesystem::create_directories(folderName);
     std::string stem = std::filesystem::path(objName).stem().string();
     SaveOBJs(folderName, stem, parts, params);
+#if WITH_LOG
     logger::info("Split output: {} parts written to {}", parts.size(), folderName);
+#endif
   }
 
   return 0;

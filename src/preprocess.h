@@ -1,4 +1,5 @@
 #pragma once
+#include "../public/def.h"
 #include <openvdb/Exceptions.h>
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/MeshToVolume.h>
@@ -7,11 +8,10 @@
 #include <vector>
 #include <cstdio>
 #include <string>
-#ifdef _OPENMP
+#if WITH_OPENMP
 #include <omp.h>
 #endif
 #include <algorithm>
-
 #include "model_obj.h"
 #include "logger.h"
 
