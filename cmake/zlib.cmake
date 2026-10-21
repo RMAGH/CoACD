@@ -10,7 +10,7 @@ if(CMAKE_VERSION VERSION_LESS 3.28)
   FetchContent_Declare(
     zlib
     GIT_REPOSITORY https://github.com/madler/zlib.git
-    GIT_TAG v1.2.11
+    GIT_TAG v1.3.1
     OVERRIDE_FIND_PACKAGE)
 
   FetchContent_GetProperties(zlib)
@@ -23,7 +23,7 @@ else()
   FetchContent_Declare(
     zlib
     GIT_REPOSITORY https://github.com/madler/zlib.git
-    GIT_TAG v1.2.11
+    GIT_TAG v1.3.1
     EXCLUDE_FROM_ALL OVERRIDE_FIND_PACKAGE)
   FetchContent_MakeAvailable(zlib)
 

@@ -119,6 +119,9 @@ target_include_directories(openvdb_static PUBLIC
     ${boost_SOURCE_DIR}/libs/interprocess/include
     ${boost_SOURCE_DIR}/libs/intrusive/include
     ${boost_SOURCE_DIR}/libs/tti/include
+    ${boost_SOURCE_DIR}/libs/move/include
+    ${boost_SOURCE_DIR}/libs/type_index/include
+    ${boost_SOURCE_DIR}/libs/container/include
 )
 
 add_library(Boost::disable_autolinking INTERFACE IMPORTED)
